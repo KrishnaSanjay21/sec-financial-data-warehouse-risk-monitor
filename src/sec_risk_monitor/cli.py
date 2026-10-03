@@ -9,6 +9,7 @@ import typer
 from .config import Settings
 from .database import connect, migrate
 from .pipeline import run_incremental_ingestion
+from .quality import has_blocking_failures, run_quality_checks
 
 app = typer.Typer(no_args_is_help=True, help="SEC warehouse ingestion and quality controls")
 
@@ -41,10 +42,28 @@ def ingest(limit: int | None = typer.Option(None, min=1, max=500)) -> None:
         raise typer.Exit(code=1)
 
 
+@app.command()
+def quality() -> None:
+    """Execute warehouse integrity and financial reconciliation checks."""
+
+    settings = Settings()
+    with connect(settings.database_url) as connection:
+        results = run_quality_checks(connection)
+    for result in results:
+        status = "PASS" if result.passed else "FAIL"
+        typer.echo(
+            f"{status:4} {result.name}: {result.failures_found}/"
+            f"{result.records_checked} failures"
+        )
+    if has_blocking_failures(results):
+        raise typer.Exit(code=2)
+
+
 @app.command("run-all")
 def run_all(limit: int | None = typer.Option(None, min=1, max=500)) -> None:
     """Initialize the database and run incremental ingestion."""
 
     init_db()
     ingest(limit=limit)
+    quality()
 
