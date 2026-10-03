@@ -17,12 +17,22 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    sec_user_agent: str = Field(default="SEC Risk Monitor contact@example.com")
+    sec_user_agent: str = Field(min_length=8)
     database_url: str = "postgresql://sec_user:sec_password@localhost:5432/sec_risk"
     sec_requests_per_second: float = 8.0
     sec_company_limit: int = 100
     sec_base_url: str = "https://data.sec.gov"
     sec_www_url: str = "https://www.sec.gov"
+
+    @field_validator("sec_user_agent")
+    @classmethod
+    def identifiable_user_agent(cls, value: str) -> str:
+        if "@" not in value or "example.com" in value.lower():
+            raise ValueError(
+                "SEC_USER_AGENT must identify you with a real contact email, "
+                'for example "Your Name you@domain.com"'
+            )
+        return value
 
     @field_validator("sec_requests_per_second")
     @classmethod

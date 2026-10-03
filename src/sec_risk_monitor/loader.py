@@ -98,28 +98,29 @@ def upsert_company(connection: Connection, company: dict[str, Any]) -> int:
 def upsert_filings(
     connection: Connection, company_id: int, run_id: int, filings: Iterable[dict[str, Any]]
 ) -> int:
-    count = 0
+    parameters = [
+        {**filing, "company_id": company_id, "run_id": run_id} for filing in filings
+    ]
+    if not parameters:
+        return 0
     with connection.cursor() as cursor:
-        for filing in filings:
-            cursor.execute(
-                """INSERT INTO fact_filing
-                       (accession_number, company_id, filing_date, report_date,
-                        acceptance_datetime, form, file_number, primary_document,
-                        primary_doc_description, is_amendment, source_run_id)
-                   VALUES (%(accession_number)s, %(company_id)s, %(filing_date)s,
-                           %(report_date)s, %(acceptance_datetime)s, %(form)s,
-                           %(file_number)s, %(primary_document)s,
-                           %(primary_doc_description)s, %(is_amendment)s, %(run_id)s)
-                   ON CONFLICT (accession_number) DO UPDATE SET
-                       report_date = EXCLUDED.report_date,
-                       acceptance_datetime = EXCLUDED.acceptance_datetime,
-                       primary_document = EXCLUDED.primary_document,
-                       primary_doc_description = EXCLUDED.primary_doc_description
-                   RETURNING accession_number""",
-                {**filing, "company_id": company_id, "run_id": run_id},
-            )
-            count += int(cursor.fetchone() is not None)
-    return count
+        cursor.executemany(
+            """INSERT INTO fact_filing
+                   (accession_number, company_id, filing_date, report_date,
+                    acceptance_datetime, form, file_number, primary_document,
+                    primary_doc_description, is_amendment, source_run_id)
+               VALUES (%(accession_number)s, %(company_id)s, %(filing_date)s,
+                       %(report_date)s, %(acceptance_datetime)s, %(form)s,
+                       %(file_number)s, %(primary_document)s,
+                       %(primary_doc_description)s, %(is_amendment)s, %(run_id)s)
+               ON CONFLICT (accession_number) DO UPDATE SET
+                   report_date = EXCLUDED.report_date,
+                   acceptance_datetime = EXCLUDED.acceptance_datetime,
+                   primary_document = EXCLUDED.primary_document,
+                   primary_doc_description = EXCLUDED.primary_doc_description""",
+            parameters,
+        )
+        return cursor.rowcount
 
 
 def _reporting_period_id(connection: Connection, fact: dict[str, Any]) -> int:
@@ -140,28 +141,42 @@ def _reporting_period_id(connection: Connection, fact: dict[str, Any]) -> int:
 def upsert_financial_facts(
     connection: Connection, company_id: int, run_id: int, facts: Iterable[dict[str, Any]]
 ) -> int:
-    inserted = 0
+    period_cache: dict[tuple[Any, ...], int] = {}
+    parameters: list[dict[str, Any]] = []
+    for fact in facts:
+        period_key = (
+            fact["period_start"],
+            fact["period_end"],
+            fact["fiscal_year"],
+            fact["fiscal_period"],
+            fact["frame"],
+            fact["is_instant"],
+        )
+        if period_key not in period_cache:
+            period_cache[period_key] = _reporting_period_id(connection, fact)
+        parameters.append(
+            {
+                **fact,
+                "company_id": company_id,
+                "period_id": period_cache[period_key],
+                "run_id": run_id,
+            }
+        )
+    if not parameters:
+        return 0
+
     with connection.cursor() as cursor:
-        for fact in facts:
-            period_id = _reporting_period_id(connection, fact)
-            cursor.execute(
-                """INSERT INTO fact_financial_fact
-                       (fact_fingerprint, company_id, reporting_period_id, accession_number,
-                        taxonomy, concept_tag, concept_label, concept_description, unit,
-                        numeric_value, filed_date, form, source_run_id)
-                   VALUES (%(fact_fingerprint)s, %(company_id)s, %(period_id)s,
-                           %(accession_number)s, %(taxonomy)s, %(concept_tag)s,
-                           %(concept_label)s, %(concept_description)s, %(unit)s,
-                           %(numeric_value)s, %(filed_date)s, %(form)s, %(run_id)s)
-                   ON CONFLICT (fact_fingerprint) DO NOTHING
-                   RETURNING financial_fact_id""",
-                {
-                    **fact,
-                    "company_id": company_id,
-                    "period_id": period_id,
-                    "run_id": run_id,
-                },
-            )
-            inserted += int(cursor.fetchone() is not None)
-    return inserted
+        cursor.executemany(
+            """INSERT INTO fact_financial_fact
+                   (fact_fingerprint, company_id, reporting_period_id, accession_number,
+                    taxonomy, concept_tag, concept_label, concept_description, unit,
+                    numeric_value, filed_date, form, source_run_id)
+               VALUES (%(fact_fingerprint)s, %(company_id)s, %(period_id)s,
+                       %(accession_number)s, %(taxonomy)s, %(concept_tag)s,
+                       %(concept_label)s, %(concept_description)s, %(unit)s,
+                       %(numeric_value)s, %(filed_date)s, %(form)s, %(run_id)s)
+               ON CONFLICT (fact_fingerprint) DO NOTHING""",
+            parameters,
+        )
+        return cursor.rowcount
 
