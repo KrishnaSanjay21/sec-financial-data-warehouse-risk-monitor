@@ -1,0 +1,51 @@
+Latest Revenue =
+CALCULATE (
+    SUM ( mart_company_risk_monitor[revenue] ),
+    mart_company_risk_monitor[period_end]
+        = MAX ( mart_company_risk_monitor[period_end] )
+)
+
+Revenue YoY % =
+VAR CurrentRevenue = [Latest Revenue]
+VAR PriorRevenue =
+    CALCULATE ( [Latest Revenue], DATEADD ( 'Date'[Date], -1, YEAR ) )
+RETURN DIVIDE ( CurrentRevenue - PriorRevenue, PriorRevenue )
+
+Net Margin % =
+DIVIDE (
+    SUM ( mart_company_risk_monitor[net_income] ),
+    SUM ( mart_company_risk_monitor[revenue] )
+)
+
+Operating Margin % =
+DIVIDE (
+    SUM ( mart_company_risk_monitor[operating_income] ),
+    SUM ( mart_company_risk_monitor[revenue] )
+)
+
+Current Ratio =
+DIVIDE (
+    SUM ( mart_company_risk_monitor[current_assets] ),
+    SUM ( mart_company_risk_monitor[current_liabilities] )
+)
+
+Liabilities to Assets =
+DIVIDE (
+    SUM ( mart_company_risk_monitor[liabilities] ),
+    SUM ( mart_company_risk_monitor[assets] )
+)
+
+Restatement Count = COUNTROWS ( vw_restatements )
+
+DQ Pass Rate % =
+DIVIDE (
+    CALCULATE ( COUNTROWS ( dq_result ), dq_result[status] = "pass" ),
+    COUNTROWS ( dq_result )
+)
+
+Latest Successful Refresh =
+CALCULATE (
+    MAX ( ingestion_run[completed_at] ),
+    ingestion_run[status] = "succeeded"
+)
+
