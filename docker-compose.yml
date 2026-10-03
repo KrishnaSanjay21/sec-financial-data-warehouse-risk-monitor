@@ -1,0 +1,32 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: sec_risk
+      POSTGRES_USER: sec_user
+      POSTGRES_PASSWORD: sec_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - sec_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sec_user -d sec_risk"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  pipeline:
+    build: .
+    profiles: ["pipeline"]
+    environment:
+      DATABASE_URL: postgresql://sec_user:sec_password@postgres:5432/sec_risk
+      SEC_USER_AGENT: ${SEC_USER_AGENT:?Set SEC_USER_AGENT in .env}
+      SEC_COMPANY_LIMIT: ${SEC_COMPANY_LIMIT:-100}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["run-all"]
+
+volumes:
+  sec_postgres_data:
+
