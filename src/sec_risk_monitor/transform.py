@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Iterable
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
-from typing import Any, Iterable
+from typing import Any
+from zoneinfo import ZoneInfo
 
 
 def _columnar_rows(columns: dict[str, list[Any]]) -> Iterable[dict[str, Any]]:
@@ -47,7 +49,9 @@ def parse_filings(submissions: dict[str, Any]) -> list[dict[str, Any]]:
             continue
         acceptance = row.get("acceptanceDateTime")
         if acceptance and len(acceptance) == 14:
-            acceptance = datetime.strptime(acceptance, "%Y%m%d%H%M%S").isoformat()
+            acceptance = datetime.strptime(acceptance, "%Y%m%d%H%M%S").replace(
+                tzinfo=ZoneInfo("America/New_York")
+            ).isoformat()
         parsed.append(
             {
                 "accession_number": accession,

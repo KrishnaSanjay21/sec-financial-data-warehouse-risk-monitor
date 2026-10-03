@@ -1,0 +1,2 @@
+[console_scripts]
+sec-risk = sec_risk_monitor.cli:app
