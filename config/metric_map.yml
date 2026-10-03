@@ -1,0 +1,38 @@
+metrics:
+  revenue:
+    statement: income_statement
+    tags:
+      - RevenueFromContractWithCustomerExcludingAssessedTax
+      - SalesRevenueNet
+      - Revenues
+  gross_profit:
+    statement: income_statement
+    tags: [GrossProfit]
+  operating_income:
+    statement: income_statement
+    tags: [OperatingIncomeLoss]
+  net_income:
+    statement: income_statement
+    tags: [NetIncomeLoss, ProfitLoss]
+  assets:
+    statement: balance_sheet
+    tags: [Assets]
+  current_assets:
+    statement: balance_sheet
+    tags: [AssetsCurrent]
+  liabilities:
+    statement: balance_sheet
+    tags: [Liabilities]
+  current_liabilities:
+    statement: balance_sheet
+    tags: [LiabilitiesCurrent]
+  equity:
+    statement: balance_sheet
+    tags: [StockholdersEquity, StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest]
+  cash:
+    statement: balance_sheet
+    tags: [CashAndCashEquivalentsAtCarryingValue]
+  operating_cash_flow:
+    statement: cash_flow
+    tags: [NetCashProvidedByUsedInOperatingActivities]
+
