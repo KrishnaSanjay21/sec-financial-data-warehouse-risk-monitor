@@ -1,6 +1,5 @@
 # SEC Financial Data Warehouse & Risk Monitor
 
-[![CI](https://github.com/KrishnaSanjay21/sec-financial-data-warehouse-risk-monitor/actions/workflows/ci.yml/badge.svg)](https://github.com/KrishnaSanjay21/sec-financial-data-warehouse-risk-monitor/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB)](https://www.python.org/)
 [![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16-4169E1)](https://www.postgresql.org/)
 
@@ -16,7 +15,7 @@ A portfolio-grade data engineering project that incrementally ingests real publi
 - Idempotent batch upserts, immutable raw lineage, duplicate handling, and retained restatements
 - Accounting reconciliation, integrity, freshness, and completeness controls
 - Analytics marts for revenue, margins, liquidity, leverage, cash conversion, and filing trends
-- Docker-based local execution, CI tests, and scheduled GitHub Actions orchestration
+- Docker-based local execution plus CI and scheduled-refresh workflow templates
 - A Power BI implementation kit with queries, DAX measures, theme, and four-page report specification
 
 ## Architecture
@@ -107,14 +106,14 @@ scripts/                operator entry points
 sql/                    PostgreSQL schema and analytical views
 src/sec_risk_monitor/   API client, transforms, loaders, quality, and CLI
 tests/                  deterministic unit tests and SEC-shaped fixtures
-.github/workflows/      CI and scheduled incremental refresh
+orchestration/          CI and scheduled incremental-refresh templates
 ```
 
 ## Data-source notes
 
 The project uses the official [SEC EDGAR APIs](https://www.sec.gov/search-filings/edgar-application-programming-interfaces). The submissions endpoint supplies filing history and company metadata; the Company Facts endpoint supplies standardized XBRL observations. SEC data can contain taxonomy and reporting-context differences, so the canonical mapping is transparent and all source fields remain auditable.
 
-The scheduled workflow requires repository secrets named `DATABASE_URL` and `SEC_USER_AGENT`. It is configuration-ready but should not be described as an operating production refresh until those secrets are configured and successful workflow history exists.
+The scheduled-refresh template requires repository secrets named `DATABASE_URL` and `SEC_USER_AGENT`. See [orchestration/github-actions/README.md](orchestration/github-actions/README.md). It is configuration-ready but should not be described as an operating production refresh until the templates are activated, secrets are configured, and successful workflow history exists.
 
 ## Responsible use
 

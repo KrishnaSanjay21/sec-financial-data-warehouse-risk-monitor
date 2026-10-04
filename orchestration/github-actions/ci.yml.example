@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: sec_risk
+          POSTGRES_USER: sec_user
+          POSTGRES_PASSWORD: sec_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sec_user -d sec_risk"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DATABASE_URL: postgresql://sec_user:sec_password@localhost:5432/sec_risk
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+      - run: ruff check src tests
+      - run: pytest
+      - name: Validate PostgreSQL migrations
+        run: sec-risk init-db
+
